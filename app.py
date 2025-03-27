@@ -11,18 +11,23 @@ def load_data():
     url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSG0n6vJgiLbyUo2hiiLwTr0HOyhZVONxV6W-h1UPs2ba2WLHAl33IHkcxB-sSN2vthoBJDmEnzhQdP/pub?output=csv"
     df = pd.read_csv(url)
 
-    # عرض الأعمدة إذا كان فيها مشكلة
     if df.empty or df.shape[1] < 2:
-        st.error("البيانات غير صالحة أو الملف فارغ. تحقق من Google Sheets.")
+        st.error("البيانات غير صالحة أو الملف فارغ.")
         st.stop()
 
-    # تحديد الأعمدة تلقائيًا
+    # التعرف التلقائي على الأعمدة
     date_col = df.columns[0]
     price_col = df.columns[1]
 
     df = df.rename(columns={date_col: "Date", price_col: "Close"})
-    df['Date'] = pd.to_datetime(df['Date'], errors='coerce')
+    
+    # تحويل التاريخ وإزالة الوقت
+    df['Date'] = pd.to_datetime(df['Date']).dt.date
+    df['Date'] = pd.to_datetime(df['Date'])  # لتحويلها مرة ثانية إلى datetime بدون وقت
+
     df = df.dropna(subset=["Date", "Close"])
+    df['Close'] = pd.to_numeric(df['Close'], errors='coerce')
+    df = df.dropna(subset=["Close"])
 
     df['Year'] = df['Date'].dt.year
     df['Daily Return'] = df['Close'].pct_change()
