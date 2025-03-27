@@ -88,7 +88,7 @@ fig.update_layout(
     ),
     yaxis=dict(title='نسبة التغير التراكمي (%)'),
     legend=dict(x=0, y=1),
-    height=500
+    height=600
 )
 
 st.plotly_chart(fig, use_container_width=True)
