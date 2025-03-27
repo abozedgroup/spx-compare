@@ -15,12 +15,11 @@ def load_data():
         st.error("البيانات غير صالحة أو الملف فارغ.")
         st.stop()
 
-    # إزالة الصفوف غير القابلة للتحويل إلى تاريخ
-    df = df[pd.to_datetime(df[df.columns[0]], errors='coerce').notnull()]
-    df['Date'] = pd.to_datetime(df[df.columns[0]])
+    # تنظيف التاريخ وتحويله لتاريخ فقط
+    df['Date'] = pd.to_datetime(df[df.columns[0]], errors='coerce')
+    df = df.dropna(subset=["Date"])
     df = df.rename(columns={df.columns[1]: "Close"})
 
-    df = df.dropna(subset=["Date", "Close"])
     df['Close'] = pd.to_numeric(df['Close'], errors='coerce')
     df = df.dropna(subset=["Close"])
 
