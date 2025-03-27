@@ -18,7 +18,7 @@ fig = go.Figure()
 
 # متوسط السنوات السابقة
 fig.add_trace(go.Scatter(
-    x=merged['Date'],
+    x=merged['Date'].dt.date,
     y=merged['Avg Cumulative Return'] * 100,
     mode='lines',
     name='Average YTD Percent Change, 2015-2024',
@@ -27,7 +27,7 @@ fig.add_trace(go.Scatter(
 
 # سنة 2025
 fig.add_trace(go.Scatter(
-    x=merged['Date'],
+    x=merged['Date'].dt.date,
     y=merged['Cumulative Return'] * 100,
     mode='lines',
     name='2025 YTD Percent Change',
