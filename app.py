@@ -6,13 +6,23 @@ st.set_page_config(layout="wide")
 st.title("S&P 500 - مقارنة الأداء التراكمي")
 st.subheader("بيانات حية من Google Sheets - تحدث تلقائيًا يوميًا")
 
-@st.cache_data(ttl=86400)  # يحدث البيانات كل 24 ساعة
+@st.cache_data(ttl=86400)
 def load_data():
     url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSG0n6vJgiLbyUo2hiiLwTr0HOyhZVONxV6W-h1UPs2ba2WLHAl33IHkcxB-sSN2vthoBJDmEnzhQdP/pub?output=csv"
     df = pd.read_csv(url)
 
-    df['Date'] = pd.to_datetime(df['Date'])
-    df = df.rename(columns={df.columns[1]: "Close"})
+    # عرض الأعمدة إذا كان فيها مشكلة
+    if df.empty or df.shape[1] < 2:
+        st.error("البيانات غير صالحة أو الملف فارغ. تحقق من Google Sheets.")
+        st.stop()
+
+    # تحديد الأعمدة تلقائيًا
+    date_col = df.columns[0]
+    price_col = df.columns[1]
+
+    df = df.rename(columns={date_col: "Date", price_col: "Close"})
+    df['Date'] = pd.to_datetime(df['Date'], errors='coerce')
+    df = df.dropna(subset=["Date", "Close"])
 
     df['Year'] = df['Date'].dt.year
     df['Daily Return'] = df['Close'].pct_change()
