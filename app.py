@@ -4,7 +4,7 @@ import plotly.graph_objects as go
 
 st.set_page_config(layout="wide")
 st.title("S&P 500 - مقارنة الأداء التراكمي")
-st.subheader("مقارنة أداء 2025 مع متوسط الأداء (2015 - 2024) حسب يوم التداول")
+st.subheader("2025 مقابل متوسط السنوات السابقة (2015-2024) حسب يوم التداول")
 
 @st.cache_data(ttl=86400)
 def load_data():
@@ -29,47 +29,50 @@ def load_data():
         st.error("البيانات غير كافية.")
         st.stop()
 
-    # نحسب متوسط الأداء
     avg = df_past.groupby('Trading Day')['Cumulative Return'].mean().reset_index()
     avg.columns = ['Trading Day', 'Avg Cumulative Return']
-
-    # نربط التواريخ الحقيقية من 2025 بالمتوسط
-    avg = pd.merge(avg, df_2025[['Trading Day', 'Date']], on='Trading Day', how='left')
-    avg.dropna(subset=['Date'], inplace=True)
-    avg['DateStr'] = avg['Date'].dt.strftime('%Y-%m-%d')
-    df_2025['DateStr'] = df_2025['Date'].dt.strftime('%Y-%m-%d')
 
     return avg, df_2025
 
 avg, df_2025 = load_data()
 
+# تجهيز التواريخ التي ستُعرض على المحور
+tickvals = df_2025['Trading Day']
+ticktext = df_2025['Date'].dt.strftime('%b %d')
+
 fig = go.Figure()
 
+# متوسط السنوات السابقة
 fig.add_trace(go.Scatter(
-    x=avg['DateStr'],
+    x=avg['Trading Day'],
     y=avg['Avg Cumulative Return'] * 100,
     mode='lines',
     name='متوسط التغير التراكمي (2015-2024)',
     line=dict(color='blue')
 ))
 
+# أداء 2025
 fig.add_trace(go.Scatter(
-    x=df_2025['DateStr'],
+    x=df_2025['Trading Day'],
     y=df_2025['Cumulative Return'] * 100,
     mode='lines',
     name='التغير التراكمي 2025',
     line=dict(color='red')
 ))
 
+# إعدادات المحور
 fig.update_layout(
-    xaxis_title='التاريخ',
-    yaxis_title='نسبة التغير التراكمي (%)',
-    legend=dict(x=0, y=1),
-    height=500,
     xaxis=dict(
-        tickformat="%b %d",  # تنسيق المحور: Jan 01, Feb 15, إلخ
-        tickangle=0
-    )
+        title='التاريخ (حسب يوم التداول)',
+        tickmode='array',
+        tickvals=tickvals,
+        ticktext=ticktext,
+        tickangle=0,
+        tickfont=dict(size=10),
+    ),
+    yaxis=dict(title='نسبة التغير التراكمي (%)'),
+    legend=dict(x=0, y=1),
+    height=500
 )
 
 st.plotly_chart(fig, use_container_width=True)
