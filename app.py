@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
+from pandas.tseries.offsets import BDay
 
 st.set_page_config(layout="wide")
 st.title("S&P 500 - مقارنة الأداء التراكمي")
@@ -34,15 +35,22 @@ def load_data():
 
     return avg, df_2025
 
+# تحميل البيانات
 avg, df_2025 = load_data()
 
-# تجهيز التواريخ التي ستُعرض على المحور
-tickvals = df_2025['Trading Day']
-ticktext = df_2025['Date'].dt.strftime('%b %d')
+# توليد تواريخ كاملة لـ 252 يوم تداول تبدأ من أول يوم في 2025
+start_date = df_2025['Date'].min()
+trading_days_full = pd.date_range(start=start_date, periods=252, freq=BDay())
+trading_days_full = trading_days_full[:avg['Trading Day'].max()]  # في حال كان أقل من 252 يوم
 
+# إعداد التواريخ للمحور (كل 10 أيام تداول)
+tickvals = avg['Trading Day'][::10]
+ticktext = trading_days_full.strftime('%b %d')[::10]
+
+# الرسم البياني
 fig = go.Figure()
 
-# متوسط السنوات السابقة
+# الخط الأزرق (المتوسط)
 fig.add_trace(go.Scatter(
     x=avg['Trading Day'],
     y=avg['Avg Cumulative Return'] * 100,
@@ -51,7 +59,7 @@ fig.add_trace(go.Scatter(
     line=dict(color='blue')
 ))
 
-# أداء 2025
+# الخط الأحمر (2025)
 fig.add_trace(go.Scatter(
     x=df_2025['Trading Day'],
     y=df_2025['Cumulative Return'] * 100,
@@ -60,14 +68,14 @@ fig.add_trace(go.Scatter(
     line=dict(color='red')
 ))
 
-# إعدادات المحور
+# ضبط المحور والتنسيقات
 fig.update_layout(
     xaxis=dict(
         title='التاريخ (حسب يوم التداول)',
         tickmode='array',
         tickvals=tickvals,
         ticktext=ticktext,
-        tickangle=0,
+        tickangle=-45,
         tickfont=dict(size=10),
     ),
     yaxis=dict(title='نسبة التغير التراكمي (%)'),
