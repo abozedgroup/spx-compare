@@ -8,9 +8,15 @@ st.set_page_config(layout="wide")
 st.title("S&P 500 - مقارنة الأداء التراكمي")
 st.subheader("تحديث تلقائي لبيانات S&P 500 من 2015 حتى 2025")
 
-@st.cache_data(ttl=86400)  # تحدث البيانات كل 24 ساعة
+@st.cache_data(ttl=86400)  # يتم تحديث البيانات كل 24 ساعة
 def load_data():
     spx = yf.download('^GSPC', start='2015-01-01')
+
+    # التحقق من الأعمدة قبل المعالجة
+    if 'Date' not in spx.columns or 'Adj Close' not in spx.columns:
+        st.error("فشل تحميل بيانات SPX من yfinance. حاول لاحقًا.")
+        st.stop()
+
     spx.reset_index(inplace=True)
     spx = spx[['Date', 'Adj Close']]
     spx['Year'] = spx['Date'].dt.year
@@ -19,6 +25,7 @@ def load_data():
     spx['Cumulative Return'] = spx.groupby('Year')['Daily Return'].cumsum()
     spx['Cumulative Return'] = (1 + spx['Cumulative Return']) - 1
 
+    # فصل السنوات
     spx_past = spx[spx['Year'] < 2025]
     spx_2025 = spx[spx['Year'] == 2025]
 
@@ -31,7 +38,7 @@ def load_data():
 
 merged = load_data()
 
-# الرسم البياني
+# إنشاء الرسم البياني
 fig = go.Figure()
 
 fig.add_trace(go.Scatter(
