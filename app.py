@@ -15,15 +15,10 @@ def load_data():
         st.error("البيانات غير صالحة أو الملف فارغ.")
         st.stop()
 
-    # التعرف التلقائي على الأعمدة
-    date_col = df.columns[0]
-    price_col = df.columns[1]
-
-    df = df.rename(columns={date_col: "Date", price_col: "Close"})
-    
-    # تحويل التاريخ وإزالة الوقت
-    df['Date'] = pd.to_datetime(df['Date']).dt.date
-    df['Date'] = pd.to_datetime(df['Date'])  # لتحويلها مرة ثانية إلى datetime بدون وقت
+    # إزالة الصفوف غير القابلة للتحويل إلى تاريخ
+    df = df[pd.to_datetime(df[df.columns[0]], errors='coerce').notnull()]
+    df['Date'] = pd.to_datetime(df[df.columns[0]])
+    df = df.rename(columns={df.columns[1]: "Close"})
 
     df = df.dropna(subset=["Date", "Close"])
     df['Close'] = pd.to_numeric(df['Close'], errors='coerce')
