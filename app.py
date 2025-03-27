@@ -11,49 +11,40 @@ def load_data():
     url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSG0n6vJgiLbyUo2hiiLwTr0HOyhZVONxV6W-h1UPs2ba2WLHAl33IHkcxB-sSN2vthoBJDmEnzhQdP/pub?output=csv"
     df = pd.read_csv(url)
 
-    # ضبط الأعمدة وتحويل الأنواع
     df.columns = ["Date", "Close"]
     df['Date'] = pd.to_datetime(df['Date'], errors="coerce")
     df['Close'] = pd.to_numeric(df['Close'], errors="coerce")
     df = df.dropna(subset=["Date", "Close"])
 
-    # حساب المؤشرات
     df['Year'] = df['Date'].dt.year
     df['Daily Return'] = df['Close'].pct_change()
     df['Trading Day'] = df.groupby('Year').cumcount() + 1
     df['Cumulative Return'] = df.groupby('Year')['Daily Return'].cumsum()
     df['Cumulative Return'] = (1 + df['Cumulative Return']) - 1
 
-    # فصل البيانات
     df_past = df[df['Year'] < 2025]
-    df_2025 = df[df['Year'] == 2025]
+    df_2025 = df[df['Year'] == 2025].copy()
 
     if df_past.empty or df_2025.empty:
-        st.error("البيانات غير كافية للرسم. تأكد من توفر بيانات لـ 2025 و السنوات السابقة.")
+        st.error("البيانات غير كافية.")
         st.stop()
 
-    # المتوسط الكامل لكل يوم تداول
+    # نحسب متوسط الأداء
     avg = df_past.groupby('Trading Day')['Cumulative Return'].mean().reset_index()
     avg.columns = ['Trading Day', 'Avg Cumulative Return']
 
-    # استخدام أول سنة لتوليد تواريخ تمثيلية للمتوسط
-    sample_year = df_past[df_past['Year'] == 2024]  # أو أي سنة موجودة
-    date_map = sample_year[['Trading Day', 'Date']].drop_duplicates()
-    avg = pd.merge(avg, date_map, on='Trading Day', how='left')
+    # نربط التواريخ الحقيقية من 2025 بالمتوسط
+    avg = pd.merge(avg, df_2025[['Trading Day', 'Date']], on='Trading Day', how='left')
+    avg.dropna(subset=['Date'], inplace=True)
     avg['DateStr'] = avg['Date'].dt.strftime('%Y-%m-%d')
-
-    # تجهيز بيانات 2025
     df_2025['DateStr'] = df_2025['Date'].dt.strftime('%Y-%m-%d')
 
     return avg, df_2025
 
-# تحميل البيانات
 avg, df_2025 = load_data()
 
-# رسم البيانات
 fig = go.Figure()
 
-# المتوسط التاريخي (2015-2024)
 fig.add_trace(go.Scatter(
     x=avg['DateStr'],
     y=avg['Avg Cumulative Return'] * 100,
@@ -62,7 +53,6 @@ fig.add_trace(go.Scatter(
     line=dict(color='blue')
 ))
 
-# أداء 2025
 fig.add_trace(go.Scatter(
     x=df_2025['DateStr'],
     y=df_2025['Cumulative Return'] * 100,
@@ -75,7 +65,11 @@ fig.update_layout(
     xaxis_title='التاريخ',
     yaxis_title='نسبة التغير التراكمي (%)',
     legend=dict(x=0, y=1),
-    height=500
+    height=500,
+    xaxis=dict(
+        tickformat="%b %d",  # تنسيق المحور: Jan 01, Feb 15, إلخ
+        tickangle=0
+    )
 )
 
 st.plotly_chart(fig, use_container_width=True)
