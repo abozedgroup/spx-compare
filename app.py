@@ -9,17 +9,14 @@ st.subheader("2025 مقابل متوسط الأداء من 2015 إلى 2024 حس
 
 # قائمة المؤشرات وروابطها
 symbols = {
-    "S&P 500 (SPX)": "0",
-    "Nasdaq 100 (QQQ)": "1428234309",
-    "Dow Jones (DIA)": "2020634384"
+    "S&P 500 (SPX)": "https://docs.google.com/spreadsheets/d/e/2PACX-1vSG0n6vJgiLbyUo2hiiLwTr0HOyhZVONxV6W-h1UPs2ba2WLHAl33IHkcxB-sSN2vthoBJDmEnzhQdP/pub?gid=0&single=true&output=csv",
+    "Nasdaq 100 (QQQ)": "https://docs.google.com/spreadsheets/d/e/2PACX-1vSG0n6vJgiLbyUo2hiiLwTr0HOyhZVONxV6W-h1UPs2ba2WLHAl33IHkcxB-sSN2vthoBJDmEnzhQdP/pub?gid=1428234309&single=true&output=csv",
+    "Dow Jones (DIA)": "https://docs.google.com/spreadsheets/d/e/2PACX-1vSG0n6vJgiLbyUo2hiiLwTr0HOyhZVONxV6W-h1UPs2ba2WLHAl33IHkcxB-sSN2vthoBJDmEnzhQdP/pub?gid=2020634384&single=true&output=csv"
 }
 
 # اختيار المؤشر
 selected_symbol = st.selectbox("اختر المؤشر:", list(symbols.keys()))
-gid = symbols[selected_symbol]
-
-# رابط الملف العام
-base_url = "https://docs.google.com/spreadsheets/d/1-0RoT4BK96Mn9V36RtoHFH0Ibwun9pVi0tuZuqpCGEA/export?format=csv&gid="
+data_url = symbols[selected_symbol]
 
 @st.cache_data(ttl=86400)
 def load_data(url):
@@ -44,7 +41,6 @@ def load_data(url):
     return avg, df_2025
 
 # تحميل البيانات
-data_url = base_url + gid
 avg, df_2025 = load_data(data_url)
 
 # توليد تواريخ كاملة لـ 252 يوم تداول تبدأ من أول يوم في 2025
