@@ -1,41 +1,54 @@
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
-import yfinance as yf
+import requests
 
 st.set_page_config(layout="wide")
-
 st.title("S&P 500 - مقارنة الأداء التراكمي")
-st.subheader("تحديث تلقائي لبيانات S&P 500 من 2015 حتى 2025")
+st.subheader("بيانات مباشرة من Alpha Vantage باستخدام التحديث التلقائي")
 
-@st.cache_data(ttl=86400)  # يتم تحديث البيانات كل 24 ساعة
+@st.cache_data(ttl=86400)  # تحديث يومي
 def load_data():
-    spx = yf.download('^GSPC', start='2015-01-01')
+    API_KEY = "X57FEQ50RF9X5LR5"
+    SYMBOL = "SPX"
+    FUNCTION = "TIME_SERIES_DAILY_ADJUSTED"
+    URL = f"https://www.alphavantage.co/query?function={FUNCTION}&symbol={SYMBOL}&outputsize=full&apikey={API_KEY}"
 
-    # التحقق من الأعمدة قبل المعالجة
-    if 'Date' not in spx.columns or 'Adj Close' not in spx.columns:
-        st.error("فشل تحميل بيانات SPX من yfinance. حاول لاحقًا.")
+    r = requests.get(URL)
+    data = r.json()
+
+    if "Time Series (Daily)" not in data:
+        st.error("فشل في تحميل البيانات من Alpha Vantage.")
         st.stop()
 
-    spx.reset_index(inplace=True)
-    spx = spx[['Date', 'Adj Close']]
-    spx['Year'] = spx['Date'].dt.year
-    spx['Daily Return'] = spx['Adj Close'].pct_change()
-    spx['Trading Day'] = spx.groupby('Year').cumcount() + 1
-    spx['Cumulative Return'] = spx.groupby('Year')['Daily Return'].cumsum()
-    spx['Cumulative Return'] = (1 + spx['Cumulative Return']) - 1
+    df = pd.DataFrame.from_dict(data["Time Series (Daily)"], orient="index")
+    df.index = pd.to_datetime(df.index)
+    df.sort_index(inplace=True)
+    df = df.rename(columns={"5. adjusted close": "Adj Close"})
+    df = df[["Adj Close"]].astype(float)
+    df["Date"] = df.index
+    df.reset_index(drop=True, inplace=True)
 
-    # فصل السنوات
-    spx_past = spx[spx['Year'] < 2025]
-    spx_2025 = spx[spx['Year'] == 2025]
+    # تحليل البيانات
+    df['Year'] = df['Date'].dt.year
+    df['Daily Return'] = df['Adj Close'].pct_change()
+    df['Trading Day'] = df.groupby('Year').cumcount() + 1
+    df['Cumulative Return'] = df.groupby('Year')['Daily Return'].cumsum()
+    df['Cumulative Return'] = (1 + df['Cumulative Return']) - 1
 
-    avg_cumulative = spx_past.groupby('Trading Day')['Cumulative Return'].mean().reset_index()
-    avg_cumulative.columns = ['Trading Day', 'Avg Cumulative Return']
+    df = df[df['Year'] >= 2015]
+    df['DateStr'] = df['Date'].dt.strftime('%Y-%m-%d')
 
-    merged = pd.merge(spx_2025, avg_cumulative, on='Trading Day', how='left')
-    merged['DateStr'] = merged['Date'].dt.strftime('%Y-%m-%d')
+    df_past = df[df['Year'] < 2025]
+    df_2025 = df[df['Year'] == 2025]
+
+    avg = df_past.groupby('Trading Day')['Cumulative Return'].mean().reset_index()
+    avg.columns = ['Trading Day', 'Avg Cumulative Return']
+    merged = pd.merge(df_2025, avg, on='Trading Day', how='left')
+
     return merged
 
+# تحميل البيانات
 merged = load_data()
 
 # إنشاء الرسم البياني
@@ -45,7 +58,7 @@ fig.add_trace(go.Scatter(
     x=merged['DateStr'],
     y=merged['Avg Cumulative Return'] * 100,
     mode='lines',
-    name='Average YTD Percent Change, 2015-2024',
+    name='Average YTD Percent Change (2015-2024)',
     line=dict(color='blue')
 ))
 
