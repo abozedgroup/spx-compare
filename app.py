@@ -4,7 +4,7 @@ import plotly.graph_objects as go
 
 st.set_page_config(layout="wide")
 st.title("S&P 500 - مقارنة الأداء التراكمي")
-st.subheader("مقارنة يومية بين متوسط الأداء (2015-2024) وأداء 2025")
+st.subheader("بيانات حية من Google Sheets - تحدث تلقائيًا يوميًا")
 
 @st.cache_data(ttl=86400)
 def load_data():
@@ -15,13 +15,20 @@ def load_data():
         st.error("البيانات غير كافية.")
         st.stop()
 
-    # إعادة تسمية الأعمدة يدويًا
+    # معاينة مبدئية
+    st.write("أول 5 صفوف من البيانات الأصلية:")
+    st.dataframe(df_raw.head())
+
+    # فرض أسماء الأعمدة
     df_raw.columns = ["RawDate", "RawClose"]
 
-    # تنظيف وتحويل
+    # إزالة الصفوف اللي تاريخها ما يمكن تحويله
     df_raw["Date"] = pd.to_datetime(df_raw["RawDate"], errors="coerce")
+    df_raw = df_raw.dropna(subset=["Date"])
+
+    # تحويل الإغلاق إلى رقم
     df_raw["Close"] = pd.to_numeric(df_raw["RawClose"], errors="coerce")
-    df = df_raw.dropna(subset=["Date", "Close"]).copy()
+    df = df_raw.dropna(subset=["Close"]).copy()
 
     df['Year'] = df['Date'].dt.year
     df['Daily Return'] = df['Close'].pct_change()
@@ -33,7 +40,7 @@ def load_data():
     df_2025 = df[df['Year'] == 2025]
 
     if df_past.empty or df_2025.empty:
-        st.error("لا توجد بيانات كافية لـ 2025 أو السنوات السابقة.")
+        st.error("لا توجد بيانات كافية لعرض الرسم.")
         st.dataframe(df.head(10))
         st.stop()
 
@@ -44,16 +51,14 @@ def load_data():
     merged['DateStr'] = merged['Date'].dt.strftime('%Y-%m-%d')
 
     if merged.empty or 'Avg Cumulative Return' not in merged.columns:
-        st.error("فشل في دمج البيانات بشكل صحيح.")
+        st.error("فشل في تجهيز البيانات للعرض.")
         st.dataframe(merged.head(10))
         st.stop()
 
     return merged
 
-# تحميل البيانات
 merged = load_data()
 
-# رسم البيانات
 fig = go.Figure()
 
 fig.add_trace(go.Scatter(
